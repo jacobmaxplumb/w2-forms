@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as yup from 'yup';
 
 const animals = ["dog", "cat", "bird", "elephant"];
@@ -8,6 +8,12 @@ const initialState = {
   fullName: '',
   address: '',
   animals: []
+}
+
+const initialErrors = {
+  fullName: '',
+  address: '',
+  animals: ''
 }
 
 const schema = yup.object().shape({
@@ -21,10 +27,28 @@ const schema = yup.object().shape({
 
 function App() {
   const [formValues, setFormValues] = useState(initialState);
+  const [isDisabled, setIsDisable] = useState(true);
+  const [errors, setErrors] = useState(initialErrors);
+
+  useEffect(() => {
+    schema.isValid(formValues).then((valid) => {
+      setIsDisable(!valid);
+    })
+    yup.reach(schema, 'animals').validate(formValues.animals).then(() => {
+      setErrors({...errors, animals: ''})
+    }).catch((error) => {
+      setErrors({...errors, animals: error.errors[0]})
+    })
+  }, [formValues])
 
   const handleTextChange = (e) => {
     const {value, id} = e.target;
     setFormValues({...formValues, [id]: value})
+    yup.reach(schema, id).validate(value).then(() => {
+      setErrors({...errors, [id]: ''})
+    }).catch((error) => {
+      setErrors({...errors, [id]: error.errors[0]})
+    });
   }
 
   const handleCheckboxChange = (e) => {
@@ -41,16 +65,19 @@ function App() {
   return (
     <>
       <input onChange={handleTextChange} id='fullName' placeholder="Full Name" value={formValues.fullName} />
+      {errors.fullName && <div>{errors.fullName}</div>}
       <br />
       <input onChange={handleTextChange} id='address' placeholder="Address" value={formValues.address} />
+      {errors.address && <div>{errors.address}</div>}
       <br />
       {animals.map((animal, index) => (
         <div key={index}>
           <input name={animal} onChange={handleCheckboxChange} type="checkbox" checked={formValues.animals.includes(animal)} /> {animal}
         </div>
       ))}
+      {errors.animals && <div>{errors.animals}</div>}
       <br />
-      <button>Submit</button>
+      <button disabled={isDisabled}>Submit</button>
     </>
   );
 }
